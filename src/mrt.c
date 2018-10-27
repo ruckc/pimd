@@ -174,12 +174,12 @@ mrtentry_t *find_route(uint32_t source, uint32_t group, uint16_t flags, char cre
 		    return mrt;
 		}
 
-		logit(LOG_DEBUG, 0 , "find_route:(S,G) entry not found");
+		logit(LOG_DEBUG, 0 , "find_route:(S,G) entry not found for source %s and group %s", inet_fmt(source, s1, sizeof(s1)), inet_fmt(group, s2, sizeof(s2)));
 	    }
 
 	    /* No (S,G) entry. Return the (*,G) entry (if exist) */
 	    if ((flags & MRTF_WC) && grp->grp_route) {
-		logit(LOG_DEBUG, 0 , "find_route: No (S,G) entry. Return the (*,G) entry");
+		logit(LOG_DEBUG, 0 , "find_route: No (S,G) entry. Return the (*,G) entry for %s", inet_fmt(grp->group, s1, sizeof(s1)));
 		return grp->grp_route;
 	    }
 	}
@@ -718,6 +718,7 @@ static int search_grpmrtlink(grpentry_t *grp, uint32_t source, mrtentry_t **foun
     uint32_t source_h = ntohl(source);
 
     for (node = grp->mrtlink; node; prev = node, node = node->grpnext) {
+        logit(LOG_DEBUG, 0, "Checking entry (%s,%s) for (%s,%s)", inet_fmt(node->source->address, s1, sizeof(s1)), inet_fmt(node->group->group, s2, sizeof(s2)), inet_fmt(source, s3, sizeof(s3)), inet_fmt(grp->group, s4, sizeof(s4)));
 	/* The entries are ordered with the smaller source address first.
 	 * The addresses are in network order. */
 	if (ntohl(node->source->address) < source_h)

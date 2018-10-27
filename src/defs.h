@@ -278,7 +278,6 @@ typedef void (*ihfunc_t) (int);
 #define                 SO_RECV_BUF_SIZE_MAX (256*1024)
 #define                 SO_RECV_BUF_SIZE_MIN (48*1024)
 
-
 /*
  * Global settings, from config.c
  */
@@ -346,6 +345,21 @@ typedef enum {
 } spt_mode_t;
 
 typedef struct {
+    uint32_t network;
+    uint32_t subnetmask;
+    uint32_t masquerade_ip;
+} private_network_t;
+extern private_network_t private_network;
+
+typedef struct {
+    time_t last_seen;
+    uint32_t source;
+    uint32_t group;
+    private_network_t private_network;
+} private_mapping_t;
+extern private_mapping_t private_mapping;
+
+typedef struct {
     uint8_t   mode;
     uint32_t  bytes;
     uint32_t  packets;
@@ -401,6 +415,12 @@ extern int              phys_vif;
 extern int		udp_socket;
 
 extern int		vifs_down;
+
+extern private_network_t *private_networks;
+extern int              private_network_count;
+
+extern private_mapping_t *private_mappings;
+extern int              private_mapping_count;
 
 #define MAX_INET_BUF_LEN 19
 extern char		s1[MAX_INET_BUF_LEN];
@@ -529,6 +549,11 @@ extern int	inet_valid_subnet	(uint32_t nsubnet, uint32_t nmask);
 extern char	*inet_fmt		(uint32_t addr, char *s, size_t len);
 extern char	*netname		(uint32_t addr, uint32_t mask);
 extern uint32_t	inet_parse		(char *s, int n);
+extern int      cidr_match(uint32_t network, uint32_t mask, uint32_t ip);
+extern void	append_private_mapping(uint32_t source, uint32_t group, private_network_t *privnet);
+extern void	append_private_network(uint32_t network, uint32_t subnetmask, uint32_t masquerade_ip);
+extern int	search_private_mappings(uint32_t source, uint32_t group, private_mapping_t **privmap);
+extern int	search_private_networks(uint32_t ip, private_network_t **privnet);
 
 /* kern.c */
 extern void	k_set_sndbuf		(int socket, int bufsize, int minsize);

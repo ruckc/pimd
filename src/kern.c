@@ -296,6 +296,11 @@ void k_join(int socket, uint32_t grp, struct uvif *v)
 #endif /* __linux__ */
     mreq.imr_multiaddr.s_addr = grp;
 
+#ifdef __linux__
+	logit(LOG_DEBUG, 0,
+	      "RUCKC: Joining group %s on interface %s (ifindex %d)",
+	      inet_fmt(grp, s1, sizeof(s1)), inet_fmt(v->uv_lcl_addr, s2, sizeof(s2)), v->uv_ifindex);
+#endif
     if (setsockopt(socket, IPPROTO_IP, IP_ADD_MEMBERSHIP,
 		   (char *)&mreq, sizeof(mreq)) < 0) {
 #ifdef __linux__

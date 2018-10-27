@@ -3,6 +3,9 @@ AC_INIT(pimd, 3.0-beta1, https://github.com/troglobit/pimd/issues, , http://trog
 AM_INIT_AUTOMAKE([1.11 foreign])
 AM_SILENT_RULES([yes])
 
+AC_PREFIX_DEFAULT(/)
+AC_PREFIX_PROGRAM(/usr)
+
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_FILES([Makefile src/Makefile include/Makefile pimd.service])

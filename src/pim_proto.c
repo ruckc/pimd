@@ -905,6 +905,8 @@ int send_pim_register(char *packet)
     uint32_t     reg_src, reg_dst;
     int		reg_mtu, pktlen = 0;
     char       *buf;
+    private_mapping_t *privmap;
+    private_network_t *privnet;
 
     ip     = (struct ip *)packet;
     source = ip->ip_src.s_addr;
@@ -966,6 +968,17 @@ int send_pim_register(char *packet)
 	memset(buf, 0, sizeof(pim_register_t)); /* No flags set */
 	buf += sizeof(pim_register_t);
 
+        if(private_network_count > 0) {
+	    // TODO: add ability to delete records from private_mappings if exceeded timeout... use RESET_TIMER/FIRE_TIMER?
+            if(search_private_mappings(source, group, &privmap) == TRUE) {
+		ip->ip_src.s_addr = privmap->private_network.masquerade_ip;
+		privmap->last_seen = time(0);
+	    } else if(search_private_networks(source, &privnet) == TRUE) {
+		ip->ip_src.s_addr = privnet->masquerade_ip;
+		append_private_mapping(source, group, privnet);
+	    }
+        }
+
 	/* Copy the data packet at the back of the register packet */
 	pktlen = ntohs(ip->ip_len);
 	memcpy(buf, ip, pktlen);
@@ -992,6 +1005,9 @@ int send_pim_null_register(mrtentry_t *mrtentry)
     vifi_t vifi;
     uint32_t reg_src, reg_dst;
 
+    private_mapping_t *privmap;
+    private_network_t *privnet;
+
     /* No directly connected source; no local address */
     if ((vifi = find_vif_direct_local(mrtentry->source->address))== NO_VIF)
 	return FALSE;
@@ -1017,6 +1033,18 @@ int send_pim_null_register(mrtentry_t *mrtentry)
     ip->ip_sum   = 0;
     ip->ip_sum   = inet_cksum((uint16_t *)ip, sizeof(struct ip));
 
+    if(private_network_count > 0) {
+        // TODO: add ability to delete records from private_mappings if exceeded timeout... use RESET_TIMER/FIRE_TIMER?
+	if(search_private_mappings(mrtentry->source->address, mrtentry->group->group, &privmap) == TRUE) {
+	    ip->ip_src.s_addr = privmap->private_network.masquerade_ip;
+	    privmap->last_seen = time(0);
+	} else if(search_private_networks(mrtentry->source->address, &privnet) == TRUE) {
+	    ip->ip_src.s_addr = privnet->masquerade_ip;
+	    append_private_mapping(mrtentry->source->address, mrtentry->group->group, privnet);
+	}
+    }
+
+
     /* include the dummy ip header */
     pktlen = sizeof(pim_register_t) + sizeof(struct ip);
 
@@ -1040,6 +1068,7 @@ int receive_pim_register_stop(uint32_t reg_src, uint32_t reg_dst, char *msg, siz
     uint8_t *data;
     mrtentry_t *mrtentry;
     uint8_t pruned_oifs[MAXVIFS];
+    int i;
 
     /* Checksum */
     if (inet_cksum((uint16_t *)msg, len))
@@ -1053,6 +1082,14 @@ int receive_pim_register_stop(uint32_t reg_src, uint32_t reg_dst, char *msg, siz
 	  inet_fmt(reg_src, s1, sizeof(s1)), inet_fmt(reg_dst, s2, sizeof(s2)),
 	  inet_fmt(eusaddr.unicast_addr, s3, sizeof(s3)),
 	  inet_fmt(egaddr.mcast_addr, s4, sizeof(s4)));
+
+    if(private_network_count > 0) {
+	for(i = 0; i < private_mapping_count; i++) {
+	    if(private_mappings[i].private_network.masquerade_ip == eusaddr.unicast_addr && private_mappings[i].group == egaddr.mcast_addr) {
+		eusaddr.unicast_addr = private_mappings[i].source; // put the original source packet ip back
+	    }
+	}
+    }
 
     /* TODO: apply the group mask and do register_stop for all grp addresses */
     /* TODO: check for SourceAddress == 0 */
@@ -2417,6 +2454,9 @@ int add_jp_entry(pim_nbr_entry_t *pim_nbr, uint16_t holdtime, uint32_t group,
     int rp_flag;
     int new_grp = FALSE;
 
+    private_network_t *privnet;
+    private_mapping_t *privmap;
+
     bjpm = pim_nbr->build_jp_message;
 
     if (group == htonl(CLASSD_PREFIX) && grp_msklen == STAR_STAR_RP_MSKLEN) {
@@ -2526,6 +2566,19 @@ int add_jp_entry(pim_nbr_entry_t *pim_nbr, uint16_t holdtime, uint32_t group,
 	flags |= USADDR_RP_BIT;
     if (addr_flags & MRTF_WC)
 	flags |= USADDR_WC_BIT;
+
+    logit(LOG_DEBUG, 0, "RUCKC: Adding source %s, src_msklen %d to jp message for group %s", inet_fmt(source, s1, sizeof(s1)), src_msklen, inet_fmt(group, s2, sizeof(s2)));
+    if(private_network_count > 0) {
+	// TODO: add ability to delete records from private_mappings if exceeded timeout... use RESET_TIMER/FIRE_TIMER?
+	if(search_private_mappings(source, group, &privmap) == TRUE) {
+	    source = privmap->private_network.masquerade_ip;
+	    privmap->last_seen = time(0);
+	} else if(search_private_networks(source, &privnet) == TRUE) {
+	    source = privnet->masquerade_ip;
+	    append_private_mapping(source, group, privnet);
+	}
+    }
+
     PUT_ESADDR(source, src_msklen, flags, data);
 
     switch (join_prune) {

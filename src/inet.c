@@ -22,6 +22,12 @@ char s2[MAX_INET_BUF_LEN];		/* of IP addresses, to be passed to inet_fmt() */
 char s3[MAX_INET_BUF_LEN];
 char s4[MAX_INET_BUF_LEN];
 
+private_network_t *private_networks;
+int private_network_count = 0;
+
+private_mapping_t *private_mappings;
+int private_mapping_count = 0;
+
 
 /*
  * Verify that a given IP address is credible as a host address.
@@ -98,6 +104,60 @@ int inet_valid_subnet(uint32_t nsubnet, uint32_t nmask)
     return TRUE;
 }
 
+void append_private_mapping(uint32_t source, uint32_t group, private_network_t *privnet) {
+    private_mapping_t newmap;
+    private_mapping_t *newmaps;
+
+    logit(LOG_DEBUG, 0, "RUCKC: Registering private mapping for %s to %s", inet_fmt(source, s1, sizeof(s1)), inet_fmt(group, s2, sizeof(s2)));
+
+    newmap.private_network = *privnet;
+    newmap.source = source;
+    newmap.group = group;
+    newmap.last_seen = time(0);
+
+    newmaps = malloc((private_mapping_count + 1) * sizeof(private_mapping_t));
+    newmaps[private_mapping_count] = newmap;
+    private_mapping_count++;
+    private_mappings = newmaps;
+}
+
+// TOOD: move logic from config.c here
+void append_private_network(uint32_t network, uint32_t subnetmask, uint32_t masquerade_ip) {
+    private_network_t pn;
+    private_network_t *newnets;
+
+    pn.network = network;
+    pn.subnetmask = subnetmask;
+    pn.masquerade_ip = masquerade_ip;
+
+    newnets = malloc((private_network_count + 1) * sizeof(private_network_t));
+    newnets[private_network_count] = pn;
+    private_network_count++;
+    
+    private_networks = newnets;
+}
+
+int search_private_mappings(uint32_t source, uint32_t group, private_mapping_t **privmap) {
+    int i;
+    for(i = 0; i < private_mapping_count; i++) {
+	if(private_mappings[i].source == source && private_mappings[i].group == group) {
+	    *privmap = &private_mappings[i];
+	    return TRUE;
+	}
+    }
+    return FALSE;
+}
+
+int search_private_networks(uint32_t ip, private_network_t **privnet) {
+    int i;
+    for(i = 0; i < private_network_count; i++) {
+	if(cidr_match(ip, private_networks[i].network, private_networks[i].subnetmask) == TRUE) {
+	    *privnet = &private_networks[i];
+	    return TRUE;
+	}
+    }
+    return FALSE;
+}
 
 /*
  * Convert an IP address in uint32_t (network) format into a printable string.
@@ -136,6 +196,21 @@ uint32_t inet_parse(char *s, int n)
     ((uint8_t *)&a)[3] = a3;
 
     return a;
+}
+
+int cidr_match(uint32_t network, uint32_t subnetmask, uint32_t ip)
+{
+    char s5[19];
+
+    logit(LOG_DEBUG, 0, "cidr_match(%s, %s, %s) -> %s == %s",
+             inet_fmt(network, s1, sizeof(s1)),
+             inet_fmt(subnetmask, s2, sizeof(s2)),
+             inet_fmt(ip, s5, sizeof(s5)),
+             inet_fmt(network & subnetmask, s3, sizeof(s3)),
+             inet_fmt(ip & subnetmask, s4, sizeof(s4))
+         );
+
+    return (network & subnetmask) == (ip & subnetmask);
 }
 
 

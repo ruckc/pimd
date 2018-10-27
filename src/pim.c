@@ -408,8 +408,8 @@ static int send_frame(char *buf, size_t len, size_t frag, size_t mtu, struct soc
     char source[20], dest[20];
 
     IF_DEBUG(DEBUG_PIM_REGISTER) {
-	logit(LOG_INFO, 0, "Sending unicast: len = %d, frag %zd, mtu %zd, to %s",
-	      len, frag, mtu, inet_fmt(ip->ip_dst.s_addr, source, sizeof(source)));
+	logit(LOG_INFO, 0, "Sending unicast: len = %d, frag %zd, mtu %zd, from %s to %s",
+	      len, frag, mtu, inet_fmt(ip->ip_src.s_addr, source, sizeof(source)), inet_fmt(ip->ip_dst.s_addr, dest, sizeof(dest)));
 	dump_frame(NULL, buf, len);
     }
 

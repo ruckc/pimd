@@ -11,7 +11,7 @@ systemd_DATA     = pimd.service
 endif
 
 ## Generate MD5 checksum file
-MD5 = md5sum
+MD5 = sha512
 md5-dist:
 	@for file in $(DIST_ARCHIVES); do	\
 		$(MD5) $$file > $$file.md5;	\

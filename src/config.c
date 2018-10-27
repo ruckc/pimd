@@ -67,6 +67,7 @@
 #define CONF_IGMP_QUERIER_TIMEOUT               15
 #define CONF_HELLO_INTERVAL                     16
 #define CONF_DISABLE_VIFS                       17
+#define CONF_PRIVATE_NETWORK                    18
 
 /*
  * Beginnings of a refactor of the static uvifs[] array
@@ -104,7 +105,6 @@ static LIST_HEAD(, iflist) il = LIST_HEAD_INITIALIZER();
 
 static uint32_t        lineno;
 extern struct rp_hold *g_rp_hold;
-
 
 /*
  * Populate interface list with interfaces from pimd.conf
@@ -501,6 +501,8 @@ static int parse_option(char *word)
 	return CONF_SCOPED;
     if (EQUAL(word, "hello-interval"))
 	return CONF_HELLO_INTERVAL;
+    if (EQUAL(word, "private-network"))
+        return CONF_PRIVATE_NETWORK;
 
     return CONF_UNKNOWN;
 }
@@ -529,7 +531,6 @@ static void validate_prefix_len(uint32_t *len)
 	*len = PIM_GROUP_PREFIX_MIN_MASKLEN;
     }
 }
-
 
 /**
  * parse_phyint - Parse physical interface configuration, if any.
@@ -1480,6 +1481,57 @@ static void fallback_config(void)
     parse_rp_candidate(s);
 }
 
+/**
+ * parse_private_network - Parse private network information for mqsquerading
+ * @s: String token
+ *
+ * Syntax:
+ * private-network <network>/<masklen> masquerade <ip>
+ *
+ * Returns:
+ * %TREE if the parsing was successful, o.w. %FALSE
+ */
+int parse_private_network(char *s)
+{
+    char *w;
+    uint32_t masklen;
+    uint32_t subnetmask;
+    uint32_t network;
+    uint32_t masquerade_ip;
+
+    w = next_word(&s);
+    parse_prefix_len(w, &masklen);
+    network = inet_parse(w,4);
+
+    if(!EQUAL((w = next_word(&s)), "masquerade")) {
+	WARN("masquerade is required on private-network");
+	return FALSE;
+    }
+
+    w = next_word(&s);
+    masquerade_ip = inet_parse(w,4);
+    VAL_TO_MASK(subnetmask, masklen);
+
+    append_private_network(network, subnetmask, masquerade_ip);
+
+    logit(LOG_INFO, 0, "Configured Private Network %s/%d (%s) to be masqueraded as %s", inet_fmt(network, s1, sizeof(s1)), masklen, inet_fmt(subnetmask, s2, sizeof(s2)), inet_fmt(masquerade_ip, s3, sizeof(s3)));    
+
+    return TRUE;
+}
+
+static uint32_t ifname2addr(char *s)
+{
+    vifi_t vifi;
+    struct uvif *v;
+
+    for (vifi = 0, v = uvifs; vifi < numvifs; vifi++, v++) {
+	if (!strcmp(v->uv_name, s))
+	    return v->uv_lcl_addr;
+    }
+
+    return 0;
+}
+
 void config_vifs_from_file(void)
 {
     FILE *fp;
@@ -1583,6 +1635,10 @@ void config_vifs_from_file(void)
 		parse_hello_interval(s);
 		break;
 
+	    case CONF_PRIVATE_NETWORK:
+		parse_private_network(s);
+		break;
+
 	    default:
 		logit(LOG_WARNING, 0, "%s:%u - Unknown command '%s'", config_file, lineno, w);
 		error_flag = TRUE;
@@ -1629,20 +1685,6 @@ void config_vifs_from_file(void)
 	logit(LOG_INFO, 0, "IGMP query interval  : %u sec", igmp_query_interval);
 	logit(LOG_INFO, 0, "IGMP querier timeout : %u sec", igmp_querier_timeout);
     }
-}
-
-
-static uint32_t ifname2addr(char *s)
-{
-    vifi_t vifi;
-    struct uvif *v;
-
-    for (vifi = 0, v = uvifs; vifi < numvifs; vifi++, v++) {
-	if (!strcmp(v->uv_name, s))
-	    return v->uv_lcl_addr;
-    }
-
-    return 0;
 }
 
 static char *next_word(char **s)
