@@ -718,7 +718,6 @@ static int search_grpmrtlink(grpentry_t *grp, uint32_t source, mrtentry_t **foun
     uint32_t source_h = ntohl(source);
 
     for (node = grp->mrtlink; node; prev = node, node = node->grpnext) {
-        logit(LOG_DEBUG, 0, "Checking entry (%s,%s) for (%s,%s)", inet_fmt(node->source->address, s1, sizeof(s1)), inet_fmt(node->group->group, s2, sizeof(s2)), inet_fmt(source, s3, sizeof(s3)), inet_fmt(grp->group, s4, sizeof(s4)));
 	/* The entries are ordered with the smaller source address first.
 	 * The addresses are in network order. */
 	if (ntohl(node->source->address) < source_h)

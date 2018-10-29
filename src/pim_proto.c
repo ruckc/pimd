@@ -727,6 +727,7 @@ int receive_pim_register(uint32_t reg_src, uint32_t reg_dst, char *msg, size_t l
 	return TRUE;
     }
 
+    logit(LOG_DEBUG, 0, "RUCKC: Found mrtentry for (%s,%s)  flags:%X", inet_fmt(mrtentry->source->address, s1, sizeof(s1)), inet_fmt(mrtentry->group->group, s2, sizeof(s2)), mrtentry->flags);
     /* I am the RP */
 
     if (mrtentry->flags & MRTF_SG) {
@@ -912,6 +913,8 @@ int send_pim_register(char *packet)
     source = ip->ip_src.s_addr;
     group  = ip->ip_dst.s_addr;
 
+    int use_uvifs_src = TRUE;
+
     if (IN_PIM_SSM_RANGE(group))
 	return FALSE; /* Group is in PIM-SSM range, don't send register. */
 
@@ -971,9 +974,13 @@ int send_pim_register(char *packet)
         if(private_network_count > 0) {
 	    // TODO: add ability to delete records from private_mappings if exceeded timeout... use RESET_TIMER/FIRE_TIMER?
             if(search_private_mappings(source, group, &privmap) == TRUE) {
+		use_uvifs_src = FALSE;
+		reg_src = privmap->private_network.masquerade_ip;
 		ip->ip_src.s_addr = privmap->private_network.masquerade_ip;
 		privmap->last_seen = time(0);
 	    } else if(search_private_networks(source, &privnet) == TRUE) {
+		use_uvifs_src = FALSE;
+		reg_src = privnet->masquerade_ip;
 		ip->ip_src.s_addr = privnet->masquerade_ip;
 		append_private_mapping(source, group, privnet);
 	    }
@@ -985,7 +992,9 @@ int send_pim_register(char *packet)
 
 	pktlen += sizeof(pim_register_t); /* 'sizeof(struct ip) + sizeof(pim_header_t)' added by send_pim()  */
 	reg_mtu = uvifs[vifi].uv_mtu; /* XXX: Use PMTU to RP instead! */
-	reg_src = uvifs[vifi].uv_lcl_addr;
+        if (use_uvifs_src) {
+	    reg_src = uvifs[vifi].uv_lcl_addr;
+	}
 	reg_dst = mrtentry->group->rpaddr;
 
 	send_pim_unicast(pim_send_buf, reg_mtu, reg_src, reg_dst, PIM_REGISTER, pktlen);
