@@ -727,7 +727,7 @@ int receive_pim_register(uint32_t reg_src, uint32_t reg_dst, char *msg, size_t l
 	return TRUE;
     }
 
-    logit(LOG_DEBUG, 0, "RUCKC: Found mrtentry for (%s,%s)  flags:%X", inet_fmt(mrtentry->source->address, s1, sizeof(s1)), inet_fmt(mrtentry->group->group, s2, sizeof(s2)), mrtentry->flags);
+    logit(LOG_DEBUG, 0, "RUCKC: Found mrtentry for (%s,%s)  flags:%X", inet_fmt(inner_src, s1, sizeof(s1)), inet_fmt(inner_grp, s2, sizeof(s2)), mrtentry->flags);
     /* I am the RP */
 
     if (mrtentry->flags & MRTF_SG) {
