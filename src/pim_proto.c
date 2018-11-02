@@ -986,6 +986,9 @@ int send_pim_register(char *packet)
 	    }
         }
 
+	ip->ip_sum   = 0;
+	ip->ip_sum   = inet_cksum((uint16_t *)ip, sizeof(struct ip));
+
 	/* Copy the data packet at the back of the register packet */
 	pktlen = ntohs(ip->ip_len);
 	memcpy(buf, ip, pktlen);
@@ -1039,8 +1042,6 @@ int send_pim_null_register(mrtentry_t *mrtentry)
     ip->ip_ttl   = MINTTL; /* TODO: XXX: check whether need to setup the ttl */
     ip->ip_src.s_addr = mrtentry->source->address;
     ip->ip_dst.s_addr = mrtentry->group->group;
-    ip->ip_sum   = 0;
-    ip->ip_sum   = inet_cksum((uint16_t *)ip, sizeof(struct ip));
 
     if(private_network_count > 0) {
         // TODO: add ability to delete records from private_mappings if exceeded timeout... use RESET_TIMER/FIRE_TIMER?
@@ -1053,6 +1054,8 @@ int send_pim_null_register(mrtentry_t *mrtentry)
 	}
     }
 
+    ip->ip_sum   = 0;
+    ip->ip_sum   = inet_cksum((uint16_t *)ip, sizeof(struct ip));
 
     /* include the dummy ip header */
     pktlen = sizeof(pim_register_t) + sizeof(struct ip);
