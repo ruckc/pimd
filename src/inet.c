@@ -266,6 +266,21 @@ int inet_cksum(uint16_t *addr, u_int len)
         return answer;
 }
 
+
+/*
+ * udp_cksum to regenerate udp checksum from a full ipv4/udp packet buffer
+ *
+ * Author -
+ *      Curtis Ruck
+ *      November 2018
+ */
+uint16_t udp_cksum(char *buf, u_int len)
+{
+// TODO: implement me
+//	char *udpchkbuf = malloc(len);
+	return 0;
+}
+
 /*
  * Called by following netname() to create a mask specified network address.
  */

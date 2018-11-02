@@ -543,6 +543,7 @@ extern void     accept_membership_report(uint32_t src, uint32_t dst, struct igmp
 
 /* inet.c */
 extern int	inet_cksum		(uint16_t *addr, u_int len);
+extern uint16_t	udp_cksum		(char *buf, u_int len);
 extern int	inet_valid_host		(uint32_t naddr);
 extern int	inet_valid_mask		(uint32_t mask);
 extern int	inet_valid_subnet	(uint32_t nsubnet, uint32_t nmask);

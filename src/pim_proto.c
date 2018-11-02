@@ -909,7 +909,11 @@ int send_pim_register(char *packet)
     private_mapping_t *privmap;
     private_network_t *privnet;
 
+    int       recalcchecksum = FALSE;
+    uint16_t  udpchk = 0;
+
     ip     = (struct ip *)packet;
+
     source = ip->ip_src.s_addr;
     group  = ip->ip_dst.s_addr;
 
@@ -974,11 +978,13 @@ int send_pim_register(char *packet)
         if(private_network_count > 0) {
 	    // TODO: add ability to delete records from private_mappings if exceeded timeout... use RESET_TIMER/FIRE_TIMER?
             if(search_private_mappings(source, group, &privmap) == TRUE) {
+		recalcchecksum = TRUE;
 		use_uvifs_src = FALSE;
 		reg_src = privmap->private_network.masquerade_ip;
 		ip->ip_src.s_addr = privmap->private_network.masquerade_ip;
 		privmap->last_seen = time(0);
 	    } else if(search_private_networks(source, &privnet) == TRUE) {
+		recalcchecksum = TRUE;
 		use_uvifs_src = FALSE;
 		reg_src = privnet->masquerade_ip;
 		ip->ip_src.s_addr = privnet->masquerade_ip;
@@ -988,10 +994,21 @@ int send_pim_register(char *packet)
 
 	ip->ip_sum   = 0;
 	ip->ip_sum   = inet_cksum((uint16_t *)ip, sizeof(struct ip));
-
+    
 	/* Copy the data packet at the back of the register packet */
 	pktlen = ntohs(ip->ip_len);
 	memcpy(buf, ip, pktlen);
+
+	// disable udp checksum
+	//udp = (struct udphdr *)buf + (20);
+	//udp->check = 0;
+	//memcpy(buf+20, udp, sizeof(struct udphdr));
+	if(recalcchecksum == TRUE && ip->ip_p == IPPROTO_UDP) {
+	    udpchk = udp_cksum(buf, pktlen);
+	    // TODO: ensure this is done in the right order for network byte order
+	    buf[26] = udpchk & 0xFF;
+	    buf[27] = udpchk >> 8;
+	}
 
 	pktlen += sizeof(pim_register_t); /* 'sizeof(struct ip) + sizeof(pim_header_t)' added by send_pim()  */
 	reg_mtu = uvifs[vifi].uv_mtu; /* XXX: Use PMTU to RP instead! */
@@ -2083,7 +2100,7 @@ int receive_pim_join_prune(uint32_t src, uint32_t dst __attribute__((unused)), c
 					  mrt_srcs->asserted_oifs, 0);
 			add_kernel_cache(mrt_srcs, mrt_srcs->source->address, mrt_srcs->group->group,
 					 MFC_MOVE_FORCE);
-			mrt_srcs->flags |= MRTF_SPT;
+		//	mrt_srcs->flags |= MRTF_SPT;
 			k_chg_mfc(igmp_socket, mrt_srcs->source->address, mrt_srcs->group->group,
 				  mrt_srcs->incoming, mrt_srcs->oifs, mrt_srcs->source->address);
 		    }
