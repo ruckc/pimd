@@ -1,7 +1,7 @@
 # https://fedoraproject.org/wiki/How_to_create_an_RPM_package
 Name:           pimd
-Version:        2.4.0
-Release:        2%{?dist}
+Version:        3.0.0
+Release:        4%{?dist}
 Summary:        pimd, the PIM-SM/SSM v2 multicast daemon
 
 Group:          System Environment/Daemons
@@ -27,7 +27,7 @@ RFC 2362 with a few noted exceptions (see the RELEASE.NOTES for details).
 %build
 [ -x configure ] || ./autogen.sh
 %configure
-%make_build
+make
 
 
 %install
@@ -36,7 +36,8 @@ RFC 2362 with a few noted exceptions (see the RELEASE.NOTES for details).
 %{__mkdir_p} %{buildroot}%{_initrddir}
 %{__install} -m 0755 %{SOURCE1} %{buildroot}%{_initrddir}/%{name}
 %{__mkdir_p} %{buildroot}%{_sbindir}
-%{__install} -m 0755 %{name} %{buildroot}%{_sbindir}/%{name}
+%{__install} -m 0755 src/pimd %{buildroot}%{_sbindir}/pimd
+%{__install} -m 0755 src/pimctl %{buildroot}%{_sbindir}/pimctl
 %{__mkdir_p} %{buildroot}%{_mandir}/man8
 %{__install} -m 0644 pimd.8 %{buildroot}%{_mandir}/man8/pimd.8
 
@@ -47,10 +48,11 @@ RFC 2362 with a few noted exceptions (see the RELEASE.NOTES for details).
 
 %files
 %defattr(-,root,root,-)
-%doc AUTHORS CREDITS LICENSE LICENSE.mrouted RELEASE.NOTES
+%doc docs/AUTHORS docs/CREDITS LICENSE docs/LICENSE.mrouted docs/RELEASE.NOTES
 %config %{_sysconfdir}/pimd.conf
 %{_initrddir}/%{name}
-%{_sbindir}/%{name}
+%{_sbindir}/pimd
+%{_sbindir}/pimctl
 %{_mandir}/man8/pimd.8.gz
 
 
