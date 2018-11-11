@@ -133,13 +133,16 @@ void append_private_network(uint32_t network, uint32_t subnetmask, uint32_t masq
     newnets = malloc((private_network_count + 1) * sizeof(private_network_t));
     newnets[private_network_count] = pn;
     private_network_count++;
+    logit(LOG_DEBUG, 0, "RUCKC: adding %d private mapping", private_network_count);
     
     private_networks = newnets;
 }
 
 int search_private_mappings(uint32_t source, uint32_t group, private_mapping_t **privmap) {
     int i;
+    logit(LOG_DEBUG, 0, "RUCKC: searching for private mapping for (%s,%s)", inet_fmt(source, s1, sizeof(s1)), inet_fmt(group, s2, sizeof(s2)));
     for(i = 0; i < private_mapping_count; i++) {
+        logit(LOG_DEBUG, 0, "RUCKC:    checking private mapping for (%s,%s)", inet_fmt(private_mappings[i].source, s1, sizeof(s1)), inet_fmt(private_mappings[i].group, s2, sizeof(s2)));
 	if(private_mappings[i].source == source && private_mappings[i].group == group) {
 	    *privmap = &private_mappings[i];
 	    return TRUE;
