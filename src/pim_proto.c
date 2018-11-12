@@ -963,8 +963,9 @@ int send_pim_register(char *packet)
 		recalcchecksum = TRUE;
 		use_uvifs_src = FALSE;
 		reg_src = privmap->private_network.masquerade_ip;
-		ip->ip_src.s_addr = privmap->private_network.masquerade_ip;
+		ip->ip_src.s_addr = reg_src;
 		privmap->last_seen = time(0);
+                logit(LOG_DEBUG, 0, "RUCKC: switching reg_src to %s", inet_fmt(reg_src, s1, sizeof(s1)));
 	    } else if(search_private_networks(source, &privnet) == TRUE) {
 		recalcchecksum = TRUE;
 		use_uvifs_src = FALSE;

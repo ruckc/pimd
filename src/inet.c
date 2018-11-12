@@ -115,7 +115,7 @@ void append_private_mapping(uint32_t source, uint32_t group, private_network_t *
     newmap.group = group;
     newmap.last_seen = time(0);
 
-    newmaps = malloc((private_mapping_count + 1) * sizeof(private_mapping_t));
+    newmaps = realloc(private_mappings, (private_mapping_count + 1) * sizeof(private_mapping_t));
     newmaps[private_mapping_count] = newmap;
     private_mapping_count++;
     private_mappings = newmaps;
@@ -130,7 +130,7 @@ void append_private_network(uint32_t network, uint32_t subnetmask, uint32_t masq
     pn.subnetmask = subnetmask;
     pn.masquerade_ip = masquerade_ip;
 
-    newnets = malloc((private_network_count + 1) * sizeof(private_network_t));
+    newnets = realloc(private_networks, (private_network_count + 1) * sizeof(private_network_t));
     newnets[private_network_count] = pn;
     private_network_count++;
     logit(LOG_DEBUG, 0, "RUCKC: adding %d private mapping", private_network_count);
@@ -144,6 +144,7 @@ int search_private_mappings(uint32_t source, uint32_t group, private_mapping_t *
     for(i = 0; i < private_mapping_count; i++) {
         logit(LOG_DEBUG, 0, "RUCKC:    checking private mapping for (%s,%s)", inet_fmt(private_mappings[i].source, s1, sizeof(s1)), inet_fmt(private_mappings[i].group, s2, sizeof(s2)));
 	if(private_mappings[i].source == source && private_mappings[i].group == group) {
+            logit(LOG_DEBUG, 0, "RUCKC:    found it, returning TRUE");
 	    *privmap = &private_mappings[i];
 	    return TRUE;
 	}

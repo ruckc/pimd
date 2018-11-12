@@ -36,7 +36,7 @@ case "$1" in
 	if [ "${PIDS}" != "" ]; then
 	# Check if the service is already running?
 		echo -n "Starting PIM-SM multicast routing daemon... "
-		daemon pimd
+		pimd
 		RETVAL=$?
 		[ $RETVAL -eq 0 ] && success || failure
 		echo
